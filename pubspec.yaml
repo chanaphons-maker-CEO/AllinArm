@@ -1,0 +1,44 @@
+name: connectable
+description: ConnectAble - Accessibility & IoT captions (Thai/English)
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # UI & state
+  provider: ^6.0.5
+
+  # STT/TTS
+  speech_to_text: ^6.6.0           # ออนไลน์/ออฟไลน์บางรุ่นได้ (backup)
+  flutter_tts: ^3.8.3              # ใช้ TTS ออฟไลน์ของระบบ (Android/iOS)
+  vosk_flutter: ^0.4.0             # ใช้โมเดลออฟไลน์ (เพิ่มโมเดลใน assets)
+
+  # BLE
+  flutter_blue_plus: ^1.31.16
+
+  # WebSocket
+  web_socket_channel: ^2.4.0
+
+  # Intl
+  intl: ^0.19.0
+
+  # HTTP
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/vosk/vosk-model-small-th-0.22/
+    - assets/vosk/vosk-model-small-en-us-0.15/
