@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เว็บทายหวย Real Time - อาจารย์ชื่อดัง</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Tahoma', sans-serif;
+            font-size: 18px;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 36px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .header p {
+            font-size: 20px;
+            color: #7f8c8d;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .predictions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .prediction-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .prediction-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .teacher-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .teacher-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            margin-right: 15px;
+        }
+
+        .teacher-details h3 {
+            font-size: 22px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .teacher-details p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        .prediction-numbers {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .number-type {
+            font-size: 18px;
+            color: #34495e;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .numbers {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .number {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .confidence {
+            background: #27ae60;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .last-update {
+            font-size: 14px;
+            color: #95a5a6;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .warning h3 {
+            color: #f39c12;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .warning p {
+            color: #e67e22;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+
+        .stats-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stats-title {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+
+        .feedback-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .feedback-title {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .feedback-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 25px;
+            padding-right: 10px;
+        }
+
+        .feedback-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.5s ease;
+        }
+
+        .feedback-item.highlight {
+            background: #e8f5e8;
+            border-left-color: #27ae60;
+            animation: highlight 2s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes highlight {
+            0% { background: #d4edda; }
+            50% { background: #c3e6cb; }
+            100% { background: #e8f5e8; }
+        }
+
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .feedback-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .feedback-time {
+            font-size: 12px;
+            color: #95a5a6;
+        }
+
+        .feedback-message {
+            font-size: 16px;
+            color: #2c3e50;
+            line-height: 1.5;
+        }
+
+        .feedback-form {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px dashed #667eea;
+        }
+
+        .feedback-form h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 28px;
+            }
+           
+            .predictions-grid {
+                grid-template-columns: 1fr;
+            }
+           
+            .number {
+                font-size: 20px;
+                padding: 10px 14px;
+                min-width: 50px;
+            }
+           
+            .feedback-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔮 เว็บทายหวย Real Time</h1>
+            <p>รวมอาจารย์ชื่อดังทายเลขเด็ด</p>
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                LIVE อัพเดทสด
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h2 class="stats-title">📊 สถิติวันนี้</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number" id="total-predictions">12</span>
+                    <div class="stat-label">การทำนายทั้งหมด</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="active-teachers">6</span>
+                    <div class="stat-label">อาจารย์ออนไลน์</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="accuracy-rate">78%</span>
+                    <div class="stat-label">อัตราความแม่นยำ</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="online-users">1,249</span>
+                    <div class="stat-label">ผู้ใช้ออนไลน์</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="predictions-grid" id="predictions-container">
+            <!-- การทำนายจะถูกเพิ่มด้วย JavaScript -->
+        </div>
+
+        <div class="feedback-section">
+            <h2 class="feedback-title">💬 ความคิดเห็นจากสมาชิก</h2>
+            <div class="feedback-container" id="feedback-container">
+                <!-- ฟีดแบ็คจะถูกเพิ่มด้วย JavaScript -->
+            </div>
+           
+            <div class="feedback-form">
+                <h3>✍️ แสดงความคิดเห็น</h3>
+                <div class="form-group">
+                    <input type="text" id="user-name" placeholder="ชื่อของคุณ" maxlength="20">
+                    <textarea id="user-message" placeholder="แบ่งปันประสบการณ์การใช้งาน..." maxlength="100"></textarea>
+                    <button onclick="addUserFeedback()" class="submit-btn">ส่งความคิดเห็น</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ ข้อควรระวัง</h3>
+            <p>เว็บไซต์นี้เป็นเพียงข้อมูลสำหรับความบันเทิงเท่านั้น<br>
+            กรุณาเล่นหวยอย่างมีสติและรับผิดชอบ ไม่ควรลงทุนเกินกำลัง<br>
+            หากมีปัญหาการเล่นการพนัน โทร. 1599 เพื่อขอความช่วยเหลือ</p>
+        </div>
+    </div>
+
+    <script>
+        const teachers = [
+            {
+                name: "อาจารย์สมชาย",
+                specialty: "ดูดวงตามฝัน",
+                avatar: "ส",
+                color: ["#ff6b6b", "#ffd93d"]
+            },
+            {
+                name: "อาจารย์วิภาดา",
+                specialty: "ดูลายมือชำนาญ",
+                avatar: "ว",
+                color: ["#74b9ff", "#00cec9"]
+            },
+            {
+                name: "อาจารย์ประยุทธ",
+                specialty: "ดูฮวงจุ้ยเก่า",
+                avatar: "ป",
+                color: ["#fd79a8", "#e84393"]
+            },
+            {
+                name: "อาจารย์สุรีย์",
+                specialty: "ดูกิ่งไผ่ใหม่",
+                avatar: "ส",
+                color: ["#a29bfe", "#6c5ce7"]
+            },
+            {
+                name: "อาจารย์มานี",
+                specialty: "ดูดาวปีกา",
+                avatar: "ม",
+                color: ["#fd7e14", "#ff9f43"]
+            },
+            {
+                name: "อาจารย์วิเชียร",
+                specialty: "ดูหินศักดิ์สิทธิ์",
+                avatar: "ว",
+                color: ["#00b894", "#55efc4"]
+            }
+        ];
+
+        const thaiNames = [
+            "สมชาย", "วิภาดา", "ประยุทธ", "สุรีย์", "มานี", "วิเชียร", "สมศรี", "นภา", "ปิยะ", "วิรุณ",
+            "สุชาติ", "นิรันดร", "พรรณี", "สุพัตรา", "วัฒนา", "กรรณิกา", "ธนพล", "อรุณี", "ชยันต์", "สมิหรา",
+            "บุญชู", "แสงดาว", "วิทยา", "กนกพร", "สิทธิ", "ปรานี", "วิโรจน์", "พิมพ์ใจ", "อนุชา", "สุนีย์",
+            "จิรายุ", "ปรียา", "สมพงษ์", "นันทา", "วิรัช", "มณีรัตน์", "อิทธิพล", "ศิริพร", "ธีระ", "จุฑามาศ",
+            "สถาพร", "ปิยมาภรณ์", "วิชัย", "ภัทรา", "นิรมล", "สุดาพร", "ธีรยุทธ", "กัลยา", "ชัยพร", "พรทิพย์"
+        ];
+
+        const feedbackMessages = [
+            "ถูกจริงครับ! อาจารย์{teacher}ทายเลข{numbers}ถูกเปี๊ยบเลย",
+            "แม่นจริงๆ อาจารย์{teacher}เลขที่แนะนำ{numbers}ถูกรางวัลที่ 3",
+            "ใช้เลข{numbers}จากอาจารย์{teacher}ถูกโต๊ดจริงๆ ขอบคุณมากครับ",
+            "เก่งจริงอาจารย์{teacher} เลข{numbers}ถูกเปี๊ยบ แม่นขนาดนี้",
+            "ตามอาจารย์{teacher}มา 3 งวดแล้ว เลข{numbers}ถูกทุกครั้ง เก่งจริงๆ",
+            "ขอบคุณอาจารย์{teacher} เลข{numbers}ทำให้ได้เงินใช้หนี้",
+            "อาจารย์{teacher}แนะนำเลข{numbers}แม่นจริง ถูกรางวัลเลยครับ",
+            "เชื่อใจอาจารย์{teacher}แล้วไม่ผิดหวัง เลข{numbers}ถูกจริงๆ",
+            "ใช้เลขจากอาจารย์{teacher}มาหลายงวด เลข{numbers}ครั้งนี้แม่นอีกแล้ว",
+            "แม่นมากอาจารย์{teacher} เลข{numbers}ทำให้ถูกหวยครั้งแรกในชีวิต",
+            "ตามหาเว็บดีๆ นานแล้ว อาจารย์{teacher}เลข{numbers}ถูกจริง ขอบคุณครับ",
+            "คนแนะนำให้มาดู ลองใช้เลข{numbers}จากอาจารย์{teacher}ถูกเลย เก่งจริง",
+            "ไม่น่าเชื่อ! อาจารย์{teacher}ทายเลข{numbers}แม่นขนาดนี้",
+            "มีเว็บดีแบบนี้ อาจารย์{teacher}ให้เลข{numbers}ถูกทุกครั้ง",
+            "แฟนบอกให้มาดู อาจารย์{teacher}เลข{numbers}ถูกจริงๆ ขอบคุณมากค่ะ"
+        ];
+
+        let feedbacks = [];
+
+        function generateRandomNumbers(count = 2) {
+            const numbers = [];
+            for (let i = 0; i < count; i++) {
+                numbers.push(String(Math.floor(Math.random() * 100)).padStart(2, '0'));
+            }
+            return numbers;
+        }
+
+        function getRandomElement(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function generateRandomFeedback() {
+            const name = getRandomElement(thaiNames);
+            const teacher = getRandomElement(teachers).name;
+            const numbers = generateRandomNumbers(Math.random() > 0.5 ? 2 : 3);
+            const messageTemplate = getRandomElement(feedbackMessages);
+           
+            const message = messageTemplate
+                .replace('{teacher}', teacher)
+                .replace('{numbers}', numbers.join(', '));
+           
+            const feedback = {
+                id: Date.now() + Math.random(),
+                name: name,
+                message: message,
+                time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                isNew: true
+            };
+           
+            return feedback;
+        }
+
+        function addFeedback(feedback, highlight = false) {
+            feedbacks.unshift(feedback);
+            if (feedbacks.length > 20) {
+                feedbacks = feedbacks.slice(0, 20);
+            }
+           
+            updateFeedbackDisplay(highlight ? feedback.id : null);
+        }
+
+        function updateFeedbackDisplay(highlightId = null) {
+            const container = document.getElementById('feedback-container');
+            container.innerHTML = feedbacks.map(feedback => `
+                <div class="feedback-item ${highlightId === feedback.id ? 'highlight' : ''}" data-id="${feedback.id}">
+                    <div class="feedback-header">
+                        <span class="feedback-name">🙋‍♂️ ${feedback.name}</span>
+                        <span class="feedback-time">${feedback.time}</span>
+                    </div>
+                    <div class="feedback-message">${feedback.message}</div>
+                </div>
+            `).join('');
+        }
+
+        function addUserFeedback() {
+            const nameInput = document.getElementById('user-name');
+            const messageInput = document.getElementById('user-message');
+           
+            const name = nameInput.value.trim();
+            const message = messageInput.value.trim();
+           
+            if (!name || !message) {
+                alert('กรุณากรอกชื่อและข้อความให้ครบถ้วน');
+                return;
+            }
+           
+            const feedback = {
+                id: Date.now(),
+                name: name,
+                message: message,
+                time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                isNew: true
+            };
+           
+            addFeedback(feedback, true);
+           
+            // ล้างฟอร์ม
+            nameInput.value = '';
+            messageInput.value = '';
+           
+            // แสดงข้อความขอบคุณ
+            alert('ขอบคุณสำหรับความคิดเห็น! 🙏');
+        }
+
+        function initializeFeedbacks() {
+            // สร้างฟีดแบ็คเริ่มต้น
+            for (let i = 0; i < 8; i++) {
+                const feedback = generateRandomFeedback();
+                feedback.time = new Date(Date.now() - (i * 300000 + Math.random() * 300000)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                feedbacks.push(feedback);
+            }
+            updateFeedbackDisplay();
+        }
+
+        function generatePredictionCard(teacher, index) {
+            const numbers = generateRandomNumbers(Math.random() > 0.5 ? 2 : 3);
+            const confidence = Math.floor(Math.random() * 30) + 70;
+            const lastUpdate = new Date(Date.now() - Math.random() * 300000).toLocaleTimeString('th-TH');
+           
+            const types = ['เลขบน', 'เลขล่าง', 'เลขโต๊ด', 'เลขรัด'];
+            const selectedType = types[Math.floor(Math.random() * types.length)];
+
+            return `
+                <div class="prediction-card" style="animation-delay: ${index * 0.1}s">
+                    <div class="teacher-info">
+                        <div class="teacher-avatar" style="background: linear-gradient(45deg, ${teacher.color[0]}, ${teacher.color[1]})">
+                            ${teacher.avatar}
+                        </div>
+                        <div class="teacher-details">
+                            <h3>${teacher.name}</h3>
+                            <p>${teacher.specialty}</p>
+                        </div>
+                    </div>
+                   
+                    <div class="prediction-numbers">
+                        <div class="number-type">${selectedType}</div>
+                        <div class="numbers">
+                            ${numbers.map(num => `<div class="number">${num}</div>`).join('')}
+                        </div>
+                        <div class="confidence">ความเชื่อมั่น ${confidence}%</div>
+                    </div>
+                   
+                    <div class="last-update">
+                        อัพเดทล่าสุด: ${lastUpdate}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updatePredictions() {
+            const container = document.getElementById('predictions-container');
+            container.innerHTML = teachers.map((teacher, index) =>
+                generatePredictionCard(teacher, index)
+            ).join('');
+        }
+
+        function updateStats() {
+            const stats = {
+                'total-predictions': Math.floor(Math.random() * 5) + 10,
+                'active-teachers': Math.floor(Math.random() * 3) + 5,
+                'accuracy-rate': Math.floor(Math.random() * 20) + 70,
+                'online-users': Math.floor(Math.random() * 500) + 1000
+            };
+
+            Object.entries(stats).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    if (id === 'accuracy-rate') {
+                        element.textContent = value + '%';
+                    } else if (id === 'online-users') {
+                        element.textContent = value.toLocaleString();
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // เริ่มต้นแสดงการทำนายและฟีดแบ็ค
+        updatePredictions();
+        updateStats();
+        initializeFeedbacks();
+
+        // อัพเดทการทำนายทุก 30 วินาที
+        setInterval(updatePredictions, 30000);
+
+        // อัพเดทสถิติทุก 10 วินาที  
+        setInterval(updateStats, 10000);
+
+        // เพิ่มฟีดแบ็คใหม่ทุก 45-90 วินาที
+        setInterval(() => {
+            const randomFeedback = generateRandomFeedback();
+            addFeedback(randomFeedback, true);
+        }, Math.random() * 45000 + 45000);
+
+        // เพิ่มเอฟเฟ็กต์เมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.prediction-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+               
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
