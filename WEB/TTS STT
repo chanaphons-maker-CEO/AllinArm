@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS & STT Web App</title>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h2 {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        textarea, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #stt-result {
+            border: 1px dashed #ccc;
+            padding: 15px;
+            min-height: 100px;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        #stt-btn.recording {
+            background-color: #dc3545;
+        }
+        #stt-btn.recording:hover {
+            background-color: #c82333;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <h2>แปลงข้อความเป็นเสียง (Text-to-Speech)</h2>
+        <textarea id="tts-text" placeholder="ป้อนข้อความที่นี่...">สวัสดีครับ ยินดีต้อนรับสู่เว็บแอปพลิเคชันแปลงข้อความเป็นเสียง</textarea>
+        
+        <label for="voice-select">เลือกเสียง:</label>
+        <select id="voice-select"></select>
+        
+        <div class="slider-group">
+            <label for="rate-slider">ความเร็ว: <span id="rate-value">1</span></label>
+            <input type="range" id="rate-slider" min="0.5" max="2" value="1" step="0.1">
+        </div>
+        
+        <div class="slider-group">
+            <label for="pitch-slider">ระดับเสียง: <span id="pitch-value">1</span></label>
+            <input type="range" id="pitch-slider" min="0" max="2" value="1" step="0.1">
+        </div>
+
+        <div class="controls">
+            <button id="speak-btn">พูด</button>
+            <button id="pause-btn">หยุดชั่วคราว</button>
+            <button id="resume-btn">พูดต่อ</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>แปลงเสียงเป็นข้อความ (Speech-to-Text)</h2>
+        <button id="stt-btn">🎙️ เริ่มฟัง</button>
+        <label>ผลลัพธ์:</label>
+        <div id="stt-result">...รอการรับเสียง...</div>
+    </div>
+
+    <script>
+        // --- ส่วนของ Text-to-Speech (TTS) ---
+        const ttsText = document.getElementById('tts-text');
+        const voiceSelect = document.getElementById('voice-select');
+        const rateSlider = document.getElementById('rate-slider');
+        const pitchSlider = document.getElementById('pitch-slider');
+        const rateValue = document.getElementById('rate-value');
+        const pitchValue = document.getElementById('pitch-value');
+        const speakBtn = document.getElementById('speak-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+
+        let voices = [];
+        const utterance = new SpeechSynthesisUtterance();
+
+        // ฟังก์ชันโหลดรายการเสียงที่มีในเครื่อง
+        function populateVoiceList() {
+            voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, i) => {
+                // คัดกรองให้แสดงเสียงภาษาไทยและอังกฤษเป็นหลัก
+                if(voice.lang.includes('th') || voice.lang.includes('en')) {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.setAttribute('data-lang', voice.lang);
+                    option.setAttribute('data-name', voice.name);
+                    voiceSelect.appendChild(option);
+                }
+            });
+        }
+
+        // เมื่อรายการเสียงมีการเปลี่ยนแปลง (บราวเซอร์โหลดเสร็จ) ให้เรียกฟังก์ชัน
+        speechSynthesis.onvoiceschanged = populateVoiceList;
+
+        // อัปเดตค่าที่แสดงเมื่อมีการเลื่อน slider
+        rateSlider.addEventListener('input', () => rateValue.textContent = rateSlider.value);
+        pitchSlider.addEventListener('input', () => pitchValue.textContent = pitchSlider.value);
+
+        // เมื่อกดปุ่ม "พูด"
+        speakBtn.addEventListener('click', () => {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel(); // หยุดการพูดปัจจุบันก่อนเริ่มใหม่
+            }
+            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+            const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+            
+            utterance.text = ttsText.value;
+            utterance.voice = selectedVoice;
+            utterance.rate = rateSlider.value;
+            utterance.pitch = pitchSlider.value;
+            
+            speechSynthesis.speak(utterance);
+        });
+
+        // ปุ่มหยุดและพูดต่อ
+        pauseBtn.addEventListener('click', () => speechSynthesis.pause());
+        resumeBtn.addEventListener('click', () => speechSynthesis.resume());
+
+
+        // --- ส่วนของ Speech-to-Text (STT) ---
+        const sttBtn = document.getElementById('stt-btn');
+        const sttResult = document.getElementById('stt-result');
+
+        // ตรวจสอบว่าบราวเซอร์รองรับ SpeechRecognition หรือไม่
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let isListening = false;
+        
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            
+            // ตั้งค่าให้รับเสียงต่อเนื่องและแสดงผลลัพธ์ระหว่างพูด
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'th-TH'; // ตั้งค่าภาษาเริ่มต้นเป็นภาษาไทย
+
+            // Event handler เมื่อมีผลลัพธ์จากการแปลงเสียง
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                // แสดงผลลัพธ์สุดท้ายที่ได้แล้วต่อท้ายไปเรื่อยๆ
+                sttResult.innerHTML = finalTranscript + '<i style="color:grey;">' + interimTranscript + '</i>';
+            };
+            
+            // Event handler เมื่อการรับเสียงสิ้นสุดลง
+            recognition.onend = () => {
+                sttBtn.textContent = '🎙️ เริ่มฟัง';
+                sttBtn.classList.remove('recording');
+                isListening = false;
+            };
+
+            // จัดการการกดปุ่ม เริ่ม/หยุด ฟัง
+            sttBtn.addEventListener('click', () => {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    sttResult.innerHTML = '...กำลังฟัง...';
+                    recognition.start();
+                    sttBtn.textContent = '🛑 หยุดฟัง';
+                    sttBtn.classList.add('recording');
+                    isListening = true;
+                }
+            });
+
+        } else {
+            sttResult.innerHTML = "ขออภัย, บราวเซอร์ของคุณไม่รองรับ Speech Recognition API";
+            sttBtn.disabled = true;
+        }
+
+    </script>
+</body>
+</html>
