@@ -186,57 +186,71 @@
         const summarizeBtn = document.getElementById('summarize-btn');
         const summaryResult = document.getElementById('summary-result');
 
-        // --- ฟังก์ชันสรุปข้อความด้วย AI ---
-        async function summarizeText(text) {
-            // !!! ผู้ใช้งานต้องเปลี่ยน YOUR_API_ENDPOINT และ YOUR_API_KEY !!!
-            const API_ENDPOINT = 'YOUR_API_ENDPOINT'; // เช่น https://api.openai.com/v1/completions
-            const API_KEY = 'YOUR_API_KEY'; // เช่น sk-xxxxxxxxxxxxxxxxxxxxxx
+        // --- ฟังก์ชันสรุปข้อความแบบสกัดประโยคสำคัญ (Extractive Summarization) ---
+        function extractiveSummary(text, sentenceCount = 2) {
+            if (!text) return "";
 
-            // แสดงสถานะกำลังสรุปผล
-            summaryResult.innerHTML = '<i>กำลังสรุปผล...</i>';
+            // 1. รายการคำที่ไม่สำคัญ (Stop Words) สำหรับภาษาไทยแบบง่าย
+            const thaiStopWords = [
+                'และ', 'ใน', 'ที่', 'เป็น', 'อยู่', 'โดย', 'ได้', 'ก็', 'คือ', 'จะ', 'ไป', 'มา',
+                'มี', 'ไม่', 'ของ', 'ให้', 'การ', 'กับ', 'แต่', 'ว่า', 'นี้', 'นั้น', 'เพื่อ',
+                'แล้ว', 'อีก', 'ทุก', 'เลย', 'ดู', 'ทำ', 'เรา', 'ผม', 'ฉัน', 'เขา', 'เธอ',
+                'ครับ', 'ค่ะ', 'นะ', 'ๆ'
+            ];
 
-            try {
-                const response = await fetch(API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        // รูปแบบ body อาจแตกต่างกันไปขึ้นอยู่กับ API ที่เลือกใช้
-                        // ตัวอย่างสำหรับ OpenAI (GPT-3.5-turbo-instruct)
-                        model: 'gpt-3.5-turbo-instruct',
-                        prompt: `สรุปใจความสำคัญของข้อความนี้ให้กระชับและเข้าใจง่าย:\n\n"${text}"\n\nสรุป:`,
-                        max_tokens: 150, // จำกัดความยาวของผลลัพธ์
-                        temperature: 0.5, // ค่าความคิดสร้างสรรค์ (0-1)
-                    })
-                });
+            // 2. แบ่งข้อความเป็นประโยค (ใช้ช่องว่างและวรรคตอนเป็นตัวแบ่ง)
+            const sentences = text.match(/[^.!?\s][^.!?]*(?:[.!?](?!['"]?\s|$)[^.!?]*)*[.!?]?['"]?(?=\s|$)/g) || [];
+            if (sentences.length === 0) return text;
 
-                if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
+            // 3. คำนวณความถี่ของคำ (Word Frequencies)
+            const wordFrequencies = {};
+            const words = text.replace(/[.,!?]/g, '').split(/\s+/);
+
+            words.forEach(word => {
+                const lowerWord = word.toLowerCase();
+                if (thaiStopWords.indexOf(lowerWord) === -1 && lowerWord.length > 1) {
+                    wordFrequencies[lowerWord] = (wordFrequencies[lowerWord] || 0) + 1;
                 }
+            });
 
-                const data = await response.json();
+            // 4. ให้คะแนนแต่ละประโยค
+            const sentenceScores = {};
+            sentences.forEach(sentence => {
+                const sentenceWords = sentence.replace(/[.,!?]/g, '').split(/\s+/);
+                let score = 0;
+                sentenceWords.forEach(word => {
+                    const lowerWord = word.toLowerCase();
+                    if (wordFrequencies[lowerWord]) {
+                        score += wordFrequencies[lowerWord];
+                    }
+                });
+                sentenceScores[sentence] = score;
+            });
 
-                // การเข้าถึงผลลัพธ์อาจแตกต่างกันไป
-                // ตัวอย่างสำหรับ OpenAI
-                const summary = data.choices[0].text.trim();
-                summaryResult.textContent = summary;
+            // 5. จัดเรียงประโยคตามคะแนนและเลือกประโยคที่ดีที่สุด
+            const summarySentences = Object.keys(sentenceScores)
+                .sort((a, b) => sentenceScores[b] - sentenceScores[a])
+                .slice(0, sentenceCount);
 
-            } catch (error) {
-                console.error('Error summarizing text:', error);
-                summaryResult.textContent = 'เกิดข้อผิดพลาดในการสรุปผล กรุณาตรวจสอบ Console Log';
-                // สำหรับผู้ใช้: โปรดตรวจสอบว่า API Endpoint และ Key ถูกต้องหรือไม่
-                 summaryResult.innerHTML += '<br><small><i>(สำหรับผู้ใช้: โปรดตรวจสอบว่า API Endpoint และ Key ถูกต้องหรือไม่ในโค้ด)</i></small>';
-            }
+            return summarySentences.join(' ').trim();
         }
 
         summarizeBtn.addEventListener('click', () => {
             const textToSummarize = sttResult.innerText;
             if (textToSummarize && textToSummarize !== '...รอการรับเสียง...' && textToSummarize !== '...กำลังฟัง...') {
-                summarizeText(textToSummarize);
+                summaryResult.innerHTML = '<i>กำลังสรุปผล...</i>';
+                // ใช้ setTimeout เพื่อให้ UI อัพเดทก่อนเริ่มการคำนวณที่อาจจะหนัก
+                setTimeout(() => {
+                    const summary = extractiveSummary(textToSummarize, 2); // สรุปให้เหลือ 2 ประโยค
+                    if (summary) {
+                        summaryResult.textContent = summary;
+                    } else {
+                        summaryResult.textContent = 'ไม่สามารถสรุปผลได้ อาจเนื่องมาจากข้อความสั้นเกินไป';
+                    }
+                }, 50);
             } else {
                 alert('ไม่มีข้อความให้สรุปผล');
+                summaryResult.textContent = '...รอการสรุปผล...';
             }
         });
 
