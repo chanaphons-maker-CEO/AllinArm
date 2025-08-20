@@ -113,6 +113,12 @@
         <button id="stt-btn">🎙️ เริ่มฟัง</button>
         <label>ผลลัพธ์:</label>
         <div id="stt-result">...รอการรับเสียง...</div>
+
+        <div id="summary-container" style="margin-top: 20px;">
+            <button id="summarize-btn" style="background-color: #28a745;">📄 สรุปใจความ</button>
+            <label>ใจความสำคัญ:</label>
+            <div id="summary-result" style="border: 1px dashed #28a745; padding: 15px; min-height: 80px; border-radius: 5px; background-color: #f0faf2;">...รอการสรุปผล...</div>
+        </div>
     </div>
 
     <script>
@@ -177,6 +183,63 @@
         // --- ส่วนของ Speech-to-Text (STT) ---
         const sttBtn = document.getElementById('stt-btn');
         const sttResult = document.getElementById('stt-result');
+        const summarizeBtn = document.getElementById('summarize-btn');
+        const summaryResult = document.getElementById('summary-result');
+
+        // --- ฟังก์ชันสรุปข้อความด้วย AI ---
+        async function summarizeText(text) {
+            // !!! ผู้ใช้งานต้องเปลี่ยน YOUR_API_ENDPOINT และ YOUR_API_KEY !!!
+            const API_ENDPOINT = 'YOUR_API_ENDPOINT'; // เช่น https://api.openai.com/v1/completions
+            const API_KEY = 'YOUR_API_KEY'; // เช่น sk-xxxxxxxxxxxxxxxxxxxxxx
+
+            // แสดงสถานะกำลังสรุปผล
+            summaryResult.innerHTML = '<i>กำลังสรุปผล...</i>';
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        // รูปแบบ body อาจแตกต่างกันไปขึ้นอยู่กับ API ที่เลือกใช้
+                        // ตัวอย่างสำหรับ OpenAI (GPT-3.5-turbo-instruct)
+                        model: 'gpt-3.5-turbo-instruct',
+                        prompt: `สรุปใจความสำคัญของข้อความนี้ให้กระชับและเข้าใจง่าย:\n\n"${text}"\n\nสรุป:`,
+                        max_tokens: 150, // จำกัดความยาวของผลลัพธ์
+                        temperature: 0.5, // ค่าความคิดสร้างสรรค์ (0-1)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // การเข้าถึงผลลัพธ์อาจแตกต่างกันไป
+                // ตัวอย่างสำหรับ OpenAI
+                const summary = data.choices[0].text.trim();
+                summaryResult.textContent = summary;
+
+            } catch (error) {
+                console.error('Error summarizing text:', error);
+                summaryResult.textContent = 'เกิดข้อผิดพลาดในการสรุปผล กรุณาตรวจสอบ Console Log';
+                // สำหรับผู้ใช้: โปรดตรวจสอบว่า API Endpoint และ Key ถูกต้องหรือไม่
+                 summaryResult.innerHTML += '<br><small><i>(สำหรับผู้ใช้: โปรดตรวจสอบว่า API Endpoint และ Key ถูกต้องหรือไม่ในโค้ด)</i></small>';
+            }
+        }
+
+        summarizeBtn.addEventListener('click', () => {
+            const textToSummarize = sttResult.innerText;
+            if (textToSummarize && textToSummarize !== '...รอการรับเสียง...' && textToSummarize !== '...กำลังฟัง...') {
+                summarizeText(textToSummarize);
+            } else {
+                alert('ไม่มีข้อความให้สรุปผล');
+            }
+        });
+
 
         // ตรวจสอบว่าบราวเซอร์รองรับ SpeechRecognition หรือไม่
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
